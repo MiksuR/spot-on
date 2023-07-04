@@ -8,9 +8,12 @@ import Data.List.Extra ((!?))
 import Data.Maybe (fromMaybe)
 import DBus
 import DBus.Client
+import Options.Applicative
 import System.IO
 
-data Options = Options { textLength :: Int, speed :: Int }
+data Command = Scroll | Previous | PlayPause | Next deriving Show
+data Params = Params { textLength :: Int, speed :: Int } deriving Show
+data Options = Options { function :: Command, params :: Params } deriving Show
 
 -- Writes the name of the current song in an IORef
 -- I know this code will break if Spotify changes the
@@ -32,29 +35,21 @@ callback ref sig = traverse_ (writeIORef ref) maybeSongText
 
 -- Infinitely looping function that prints the song name in
 -- the terminal while scrolling it.
-printSong :: Options -> IORef String -> Int -> IO ()
-printSong os ref ind = do
+printSong :: Params -> IORef String -> Int -> IO ()
+printSong ps ref ind = do
   text <- readIORef ref
-  let formatted = if length text >= textLength os
-                  then take (textLength os) . drop ind $ cycle text
-                  else text ++ replicate (textLength os - length text) ' '
+  let formatted = if length text >= textLength ps
+                  then take (textLength ps) . drop ind $ cycle text
+                  else text ++ replicate (textLength ps - length text) ' '
   putStrLn formatted
-  threadDelay . (1000*) . speed $ os
+  threadDelay . (1000*) . speed $ ps
   let nextInd = if ind+1 < length text then ind+1 else 0
-  printSong os ref nextInd
+  printSong ps ref nextInd
 
-main :: IO ()
-main = do
-  -- TODO: Take command line arguments
-  let opts = Options 10 500
+scroll :: Client -> Params -> IO ()
+scroll client ps = do
   hSetBuffering stdout LineBuffering
-  client <- connectSession
-  let statusCall = (methodCall
-                    (objectPath_ "/org/mpris/MediaPlayer2")
-                    (interfaceName_ "org.mpris.MediaPlayer2.Player")
-                    (memberName_ "Metadata"))
-                   {methodCallDestination =
-                    Just $ busName_ "org.mpris.MediaPlayer2.spotify"}
+  let statusCall = callSpotify "Metadata"
   songMData <- getProperty client statusCall
   let songName = do
         mVariant <- eitherToMaybe songMData
@@ -71,4 +66,50 @@ main = do
     matchMember = Just $ memberName_ "PropertiesChanged"
   }
   _ <- addMatch client match (callback songRef)
-  printSong opts songRef 0
+  printSong ps songRef 0
+
+paramsParser :: Parser Params
+paramsParser = Params <$> lengthParser <*> speedParser
+  where
+    lengthParser = option auto (short 'l'
+      <> help "How many characters should be printed"
+      <> value 10)
+    speedParser = option auto (short 's'
+      <> help "How many characters/millisecond should be scrolled"
+      <> value 800)
+
+commandParser :: Parser Command
+commandParser = subparser $ command "scroll"
+                  (info (pure Scroll)
+                  (fullDesc <> progDesc "Print the current song while scrolling the text"))
+               <> command "previous"
+                  (info (pure Previous)
+                  (fullDesc <> progDesc "Play previous song"))
+               <> command "playpause"
+                  (info (pure PlayPause)
+                  (fullDesc <> progDesc "Toggle playback"))
+               <> command "next"
+                  (info (pure Next)
+                  (fullDesc <> progDesc "Play next song"))
+
+callSpotify :: String -> MethodCall
+callSpotify member =
+  (methodCall
+   (objectPath_ "/org/mpris/MediaPlayer2")
+   (interfaceName_ "org.mpris.MediaPlayer2.Player")
+   (memberName_ member))
+  {methodCallDestination =
+   Just $ busName_ "org.mpris.MediaPlayer2.spotify"}
+
+main :: IO ()
+main = do
+  let parser = (Options <$> commandParser <*> paramsParser) <**> helper
+  let infoM = fullDesc <> header "Help (spot-on)"
+                       <> progDesc "Spotify plugin for Polybar"
+  opts <- execParser (info parser infoM)
+  client <- connectSession
+  case opts of
+    Options Scroll ps -> scroll client ps
+    Options Previous _ -> callNoReply client (callSpotify "Previous")
+    Options PlayPause _ -> callNoReply client (callSpotify "PlayPause")
+    Options Next _ -> callNoReply client (callSpotify "Next")
