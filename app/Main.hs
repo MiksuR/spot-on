@@ -1,11 +1,14 @@
 module Main (main) where
 
 import Control.Concurrent (threadDelay)
+import Data.Either.Extra (eitherToMaybe)
+import Data.Foldable (traverse_)
 import Data.IORef
 import Data.List.Extra ((!?))
-import Data.Foldable (traverse_)
+import Data.Maybe (fromMaybe)
 import DBus
 import DBus.Client
+import System.IO
 
 data Options = Options { textLength :: Int, speed :: Int }
 
@@ -44,10 +47,25 @@ main :: IO ()
 main = do
   -- TODO: Take command line arguments
   let opts = Options 10 500
-  -- TODO: Check if Spotify is running and populate songRef
-  -- with the corresponding value.
-  songRef <- newIORef " - "
+  hSetBuffering stdout LineBuffering
   client <- connectSession
+  let statusCall = (methodCall
+                    (objectPath_ "/org/mpris/MediaPlayer2")
+                    (interfaceName_ "org.mpris.MediaPlayer2.Player")
+                    (memberName_ "Metadata"))
+                   {methodCallDestination =
+                    Just $ busName_ "org.mpris.MediaPlayer2.spotify"}
+  songMData <- getProperty client statusCall
+  let songName = do
+        mVariant <- eitherToMaybe songMData
+        dict <- fromVariant mVariant :: Maybe Dictionary
+        artistsVariant <- dictionaryItems dict !? 4
+        titleVariant <- dictionaryItems dict !? 8
+        artists <- fromVariant (snd artistsVariant) >>= fromVariant :: Maybe [String]
+        title <- fromVariant (snd titleVariant) >>= fromVariant :: Maybe String
+        artist <- artists !? 0
+        return $ title ++ " - " ++ artist ++ " - "
+  songRef <- newIORef $ fromMaybe " - " songName
   let match = matchAny {
     matchPath = Just $ objectPath_ "/org/mpris/MediaPlayer2",
     matchMember = Just $ memberName_ "PropertiesChanged"
