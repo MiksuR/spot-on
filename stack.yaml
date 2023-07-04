@@ -43,6 +43,7 @@ packages:
 #
 extra-deps:
 - dbus-1.2.29
+- optparse-applicative-0.18.1.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

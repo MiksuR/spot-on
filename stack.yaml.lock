@@ -11,6 +11,13 @@ packages:
       size: 2795
   original:
     hackage: dbus-1.2.29
+- completed:
+    hackage: optparse-applicative-0.18.1.0@sha256:b4cf8d9018e5e67cb1f14edb5130b6d05ad8bc1b5f6bd4efaa6ec0b7f28f559d,5132
+    pantry-tree:
+      sha256: 32f52adc150eb146bf4d167ff0cb21fc1e3cd7ecc1b9e5e83b986a1cd1bc58cd
+      size: 3124
+  original:
+    hackage: optparse-applicative-0.18.1.0
 snapshots:
 - completed:
     sha256: 1867d84255dff8c87373f5dd03e5a5cb1c10a99587e26c8793e750c54e83ffdc
