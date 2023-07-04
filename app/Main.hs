@@ -9,6 +9,7 @@ import Data.Maybe (fromMaybe)
 import DBus
 import DBus.Client
 import Options.Applicative
+import System.Cmd (system)
 import System.IO
 
 data Command = Scroll | Previous | PlayPause | Next deriving Show
@@ -49,8 +50,7 @@ printSong ps ref ind = do
 scroll :: Client -> Params -> IO ()
 scroll client ps = do
   hSetBuffering stdout LineBuffering
-  let statusCall = callSpotify "Metadata"
-  songMData <- getProperty client statusCall
+  songMData <- getProperty client (callSpotify "Metadata")
   let songName = do
         mVariant <- eitherToMaybe songMData
         dict <- fromVariant mVariant :: Maybe Dictionary
@@ -67,6 +67,18 @@ scroll client ps = do
   }
   _ <- addMatch client match (callback songRef)
   printSong ps songRef 0
+
+playpause :: Client -> IO ()
+playpause client = do
+  callNoReply client (callSpotify "PlayPause")
+  status <- getProperty client (callSpotify "PlaybackStatus")
+  let statusString = do
+        statusVariant <- eitherToMaybe status
+        fromVariant statusVariant :: Maybe String
+  _ <- case statusString of
+    Just "Paused" -> system "polybar-msg action \"#spot-on-playpause.hook.0\""
+    Just "Playing" -> system "polybar-msg action \"#spot-on-playpause.hook.1\""
+  return ()
 
 paramsParser :: Parser Params
 paramsParser = Params <$> lengthParser <*> speedParser
@@ -111,5 +123,5 @@ main = do
   case opts of
     Options Scroll ps -> scroll client ps
     Options Previous _ -> callNoReply client (callSpotify "Previous")
-    Options PlayPause _ -> callNoReply client (callSpotify "PlayPause")
+    Options PlayPause _ -> playpause client
     Options Next _ -> callNoReply client (callSpotify "Next")

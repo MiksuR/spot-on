@@ -35,6 +35,7 @@ library
     , dbus >=1.2
     , extra >=1.7
     , optparse-applicative >=0.18
+    , process >=1.6
   default-language: Haskell2010
 
 executable spot-on-exe
@@ -49,6 +50,7 @@ executable spot-on-exe
     , dbus >=1.2
     , extra >=1.7
     , optparse-applicative >=0.18
+    , process >=1.6
     , spot-on
   default-language: Haskell2010
 
@@ -65,5 +67,6 @@ test-suite spot-on-test
     , dbus >=1.2
     , extra >=1.7
     , optparse-applicative >=0.18
+    , process >=1.6
     , spot-on
   default-language: Haskell2010

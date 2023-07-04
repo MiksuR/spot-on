@@ -24,6 +24,7 @@ dependencies:
 - extra >= 1.7
 - dbus >= 1.2
 - optparse-applicative >= 0.18
+- process >= 1.6
 
 ghc-options:
 - -Wall
