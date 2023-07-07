@@ -52,24 +52,25 @@ getStatus client = do
 handleStatus :: String -> Maybe (IO ())
 handleStatus status =
   case status of
-    "Playing" -> Just $ callCommand "polybar-msg action \"#spot-on-playpause.hook.0\""
-    "Paused" -> Just $ callCommand "polybar-msg action \"#spot-on-playpause.hook.1\""
+    "Playing" -> Just $ callCommand "polybar-msg action \"#spot-on-playpause.hook.1\" > /dev/null"
+    "Paused" -> Just $ callCommand "polybar-msg action \"#spot-on-playpause.hook.0\" > /dev/null"
     _ -> Nothing
 
-callback :: IORef String -> Signal -> IO ()
-callback ref sig = do
+callback :: Client -> IORef String -> Signal -> IO ()
+callback client ref sig = do
   let body = signalBody sig !? 1
   let outerDict = body >>= fromVariant :: Maybe (M.Map String Variant)
   -- If the body contains metadata, then update IORef with
   -- new song title.
   -- If the body contains playback status, send messsage to polybar.
   -- If both lookups fail, do nothing.
+  status <- getStatus client
   sequence_ $ mapMaybe (outerDict >>=)
-    [ (return . writeIORef ref) <=< extractSong <=< M.lookup "Metadata",
-      handleStatus <=< fromVariant <=< M.lookup "PlaybackStatus" ]
+    [ M.lookup "Metadata" >=> extractSong >=> (return . writeIORef ref),
+      M.lookup "PlaybackStatus" >=> (\_ -> status >>= handleStatus) ]
 
 setUpListener :: Client -> IORef String -> IO ()
-setUpListener client = void . addMatch client match . callback
+setUpListener client = void . addMatch client match . callback client
   where
     match = matchAny {
       matchPath = Just $ objectPath_ "/org/mpris/MediaPlayer2",
