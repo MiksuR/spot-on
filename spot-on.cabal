@@ -24,7 +24,6 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
       SpotifyCommunications
       SpotOnOptions
   other-modules:

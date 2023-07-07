@@ -1,8 +1,8 @@
 module SpotOnOptions (
-  getSpotOnOptions,
-  Command (..),
-  Params (..),
-  Options (..)
+    getSpotOnOptions,
+    Command (..),
+    Params (..),
+    Options (..)
   ) where
 
 import Options.Applicative
