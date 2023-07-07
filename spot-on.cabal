@@ -25,6 +25,8 @@ source-repository head
 library
   exposed-modules:
       Lib
+      SpotifyCommunications
+      SpotOnOptions
   other-modules:
       Paths_spot_on
   hs-source-dirs:
@@ -32,6 +34,7 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.7 && <5
+    , containers >=0.6
     , dbus >=1.2
     , extra >=1.7
     , optparse-applicative >=0.18
@@ -47,6 +50,7 @@ executable spot-on-exe
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , containers >=0.6
     , dbus >=1.2
     , extra >=1.7
     , optparse-applicative >=0.18
@@ -64,6 +68,7 @@ test-suite spot-on-test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , containers >=0.6
     , dbus >=1.2
     , extra >=1.7
     , optparse-applicative >=0.18
