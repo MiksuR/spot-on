@@ -1,17 +1,19 @@
 module SpotifyCommunications (
-  callSpotify,
-  getSong,
-  getStatus,
-  setUpListener
+    callSpotify,
+    getSong,
+    getStatus,
+    handleStatus,
+    setUpListener
   ) where
 
-import Control.Monad (void)
+import Control.Monad
 import Data.Either.Extra (eitherToMaybe)
-import Data.Foldable (traverse_)
 import Data.IORef
 import Data.List.Extra ((!?))
+import Data.Maybe (mapMaybe)
 import DBus
 import DBus.Client
+import System.Process (callCommand)
 
 import qualified Data.Map.Strict as M
 
@@ -24,10 +26,9 @@ callSpotify member =
   {methodCallDestination =
    Just $ busName_ "org.mpris.MediaPlayer2.spotify"}
 
-extractSongFromMData :: Maybe Variant -> Maybe String
-extractSongFromMData mData = do
-  mDataVariant <- mData
-  dict <- fromVariant mDataVariant :: Maybe (M.Map String Variant)
+extractSong :: Variant -> Maybe String
+extractSong mData = do
+  dict <- fromVariant mData :: Maybe (M.Map String Variant)
   artistsVariant <- M.lookup "xesam:albumArtist" dict
   titleVariant <- M.lookup "xesam:title" dict
   artists <- fromVariant artistsVariant :: Maybe [String]
@@ -35,17 +36,10 @@ extractSongFromMData mData = do
   artist <- artists !? 0
   return $ title ++ " - " ++ artist ++ " - "
 
-getSongFromSignal :: Signal -> Maybe String
-getSongFromSignal sig = do
-  body <- signalBody sig !? 1
-  outerDict <- fromVariant body :: Maybe (M.Map String Variant)
-  let mData = M.lookup "Metadata" outerDict
-  extractSongFromMData mData
-
 getSong :: Client -> IO (Maybe String)
 getSong client = do
   songMData <- getProperty client (callSpotify "Metadata")
-  return . extractSongFromMData $ eitherToMaybe songMData
+  return $ extractSong =<< eitherToMaybe songMData
 
 getStatus :: Client -> IO (Maybe String)
 getStatus client = do
@@ -55,13 +49,29 @@ getStatus client = do
         fromVariant statusVariant :: Maybe String
   return statusString
 
+handleStatus :: String -> Maybe (IO ())
+handleStatus status =
+  case status of
+    "Playing" -> Just $ callCommand "polybar-msg action \"#spot-on-playpause.hook.0\""
+    "Paused" -> Just $ callCommand "polybar-msg action \"#spot-on-playpause.hook.1\""
+    _ -> Nothing
+
+callback :: IORef String -> Signal -> IO ()
+callback ref sig = do
+  let body = signalBody sig !? 1
+  let outerDict = body >>= fromVariant :: Maybe (M.Map String Variant)
+  -- If the body contains metadata, then update IORef with
+  -- new song title.
+  -- If the body contains playback status, send messsage to polybar.
+  -- If both lookups fail, do nothing.
+  sequence_ $ mapMaybe (outerDict >>=)
+    [ (return . writeIORef ref) <=< extractSong <=< M.lookup "Metadata",
+      handleStatus <=< fromVariant <=< M.lookup "PlaybackStatus" ]
+
 setUpListener :: Client -> IORef String -> IO ()
-setUpListener client ref = do
-  let match = matchAny {
-    matchPath = Just $ objectPath_ "/org/mpris/MediaPlayer2",
-    matchMember = Just $ memberName_ "PropertiesChanged"
-  }
-  -- I use the `traverse_` function here, because `getSongFromSignal`
-  -- returns a value of type `Maybe String`. If the function returns `Nothing`,
-  -- we don't want the program to do anything.
-  void . addMatch client match $ traverse_ (writeIORef ref) . getSongFromSignal
+setUpListener client = void . addMatch client match . callback
+  where
+    match = matchAny {
+      matchPath = Just $ objectPath_ "/org/mpris/MediaPlayer2",
+      matchMember = Just $ memberName_ "PropertiesChanged"
+    }

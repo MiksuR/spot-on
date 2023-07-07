@@ -6,7 +6,6 @@ import Data.IORef
 import Data.Maybe (fromMaybe)
 import DBus.Client
 import System.IO
-import System.Process (callCommand)
 
 import SpotOnOptions
 import SpotifyCommunications
@@ -37,11 +36,11 @@ scroll client ps = do
 
 playpause :: Client -> IO ()
 playpause client = do
-  callNoReply client (callSpotify "PlayPause")
   status <- getStatus client
-  void $ case status of
-    Just "Paused" -> callCommand "polybar-msg action \"#spot-on-playpause.hook.0\""
-    Just "Playing" -> callCommand "polybar-msg action \"#spot-on-playpause.hook.1\""
+  -- `handleStatus` returns Maybe (IO ()), and sequnence_
+  -- executes the action if the result is not Nothing.
+  sequence_ $ status >>= handleStatus
+  callNoReply client (callSpotify "PlayPause")
 
 main :: IO ()
 main = do
