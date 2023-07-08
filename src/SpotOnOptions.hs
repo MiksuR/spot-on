@@ -38,5 +38,7 @@ commandParser = subparser $ command "scroll"
 getSpotOnOptions :: IO Options
 getSpotOnOptions = do
   let parser = (Options <$> commandParser <*> paramsParser) <**> helper
+          <**> simpleVersioner "v1.0.0"
   let infoM = fullDesc <> progDesc "Spotify plugin for Polybar"
+                       <> header "spot-on v1.0.0"
   execParser (info parser infoM)
