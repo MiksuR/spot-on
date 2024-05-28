@@ -56,7 +56,7 @@ handleStatus status =
     "Paused" -> Just $ callCommand "polybar-msg action \"#spot-on-playpause.hook.0\" > /dev/null"
     _ -> Nothing
 
-callback :: Client -> IORef String -> Signal -> IO ()
+callback :: Client -> IORef (Maybe String) -> Signal -> IO ()
 callback client ref sig = do
   let body = signalBody sig !? 1
   let outerDict = body >>= fromVariant :: Maybe (M.Map String Variant)
@@ -66,10 +66,10 @@ callback client ref sig = do
   -- If both lookups fail, do nothing.
   status <- getStatus client
   sequence_ $ mapMaybe (outerDict >>=)
-    [ M.lookup "Metadata" >=> extractSong >=> (return . writeIORef ref),
+    [ M.lookup "Metadata" >=> (return . writeIORef ref . extractSong),
       M.lookup "PlaybackStatus" >=> (\_ -> status >>= handleStatus) ]
 
-setUpListener :: Client -> IORef String -> IO ()
+setUpListener :: Client -> IORef (Maybe String) -> IO ()
 setUpListener client = void . addMatch client match . callback client
   where
     match = matchAny {
