@@ -12,22 +12,25 @@ import SpotifyCommunications
 
 -- Infinitely looping function that prints the song name in
 -- the terminal while scrolling it.
-printSong :: Params -> IORef String -> Int -> IO ()
+printSong :: Params -> IORef (Maybe String) -> Int -> IO ()
 printSong ps ref ind = do
-  text <- readIORef ref
-  let formatted = if length text >= textLength ps
-                  then take (textLength ps) . drop ind $ cycle text
-                  else text ++ replicate (textLength ps - length text) ' '
-  putStrLn formatted
+  maybeText <- readIORef ref
+  let formatted = do
+        text <- maybeText
+        if length text >= textLength ps
+        then return $ take (textLength ps) . drop ind $ cycle text
+        else return $ text ++ replicate (textLength ps - length text) ' '
+  putStrLn . fromMaybe " - " $ formatted
   threadDelay . (1000*) . speed $ ps
-  let nextInd = if ind+1 < length text then ind+1 else 0
+  -- TODO: Do something smarter here v
+  let nextInd = if ind+1 < length (fromMaybe "" maybeText) then ind+1 else 0
   printSong ps ref nextInd
 
 scroll :: Client -> Params -> IO ()
 scroll client ps = do
   hSetBuffering stdout LineBuffering
-  songName <- getSong client
-  songRef <- newIORef $ fromMaybe " - " songName
+  maybeSong <- getSong client
+  songRef <- newIORef maybeSong
   -- Spawn a listener in a separate thread that
   -- listens for DBus `PropertiesChanged` signal.
   -- The callback updates the value in `songRef`.
