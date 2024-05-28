@@ -7,6 +7,10 @@ import Data.Maybe (fromMaybe)
 import DBus.Client
 import System.IO
 
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
+import Data.Text.Normalize
+
 import SpotOnOptions
 import SpotifyCommunications
 
@@ -18,7 +22,8 @@ printSong ps ref ind = do
   let formatted = if length text >= textLength ps
                   then take (textLength ps) . drop ind $ cycle text
                   else text ++ replicate (textLength ps - length text) ' '
-  putStrLn formatted
+  -- TODO: Pack to Text earlier in the execution flow
+  TIO.putStrLn . normalize NFC . T.pack $ formatted
   threadDelay . (1000*) . speed $ ps
   let nextInd = if ind+1 < length text then ind+1 else 0
   printSong ps ref nextInd
