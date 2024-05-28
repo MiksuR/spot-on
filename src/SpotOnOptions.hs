@@ -18,7 +18,7 @@ paramsParser = Params <$> lengthParser <*> speedParser
       <> help "How many characters should be printed"
       <> value 15 <> metavar "INT")
     speedParser = option auto (short 's' <> long "speed"
-      <> help "How many characters/millisecond should be scrolled"
+      <> help "How many milliseconds to wait before scrolling"
       <> value 500 <> metavar "INT")
 
 commandParser :: Parser Command
