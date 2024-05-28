@@ -18,6 +18,13 @@ packages:
       size: 3124
   original:
     hackage: optparse-applicative-0.18.1.0
+- completed:
+    hackage: unicode-transforms-0.4.0.1@sha256:adffd08a043cbf633e9574c35e206315bb07e73ed3886a91472d3cf208d8a6c3,5923
+    pantry-tree:
+      sha256: dc56592ee395b8ff91dfad3bf3b46884eb99b80af7c6397cd47f66ac21892a30
+      size: 1833
+  original:
+    hackage: unicode-transforms-0.4.0.1
 snapshots:
 - completed:
     sha256: 1867d84255dff8c87373f5dd03e5a5cb1c10a99587e26c8793e750c54e83ffdc

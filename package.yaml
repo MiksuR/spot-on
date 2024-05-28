@@ -26,6 +26,8 @@ dependencies:
 - optparse-applicative >= 0.18
 - process >= 1.6
 - containers >= 0.6
+- unicode-transforms >= 0.4
+- text >= 2.0
 
 ghc-options:
 - -Wall
