@@ -5,10 +5,11 @@ module SpotOnOptions (
     Options (..)
   ) where
 
+import Data.Int
 import Options.Applicative
 
 data Command = Scroll | Previous | PlayPause | Next deriving Show
-data Params = Params { textLength :: Int, speed :: Int } deriving Show
+data Params = Params { textLength :: Int64, speed :: Int } deriving Show
 data Options = Options { function :: Command, params :: Params } deriving Show
 
 paramsParser :: Parser Params
