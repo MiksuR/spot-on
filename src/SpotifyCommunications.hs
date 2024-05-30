@@ -16,6 +16,10 @@ import DBus.Client
 import System.Process (callCommand)
 
 import qualified Data.Map.Strict as M
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as L
+
+import Data.Text.Normalize
 
 spotifyCall :: String -> MethodCall
 spotifyCall member =
@@ -26,7 +30,7 @@ spotifyCall member =
   {methodCallDestination =
    Just $ busName_ "org.mpris.MediaPlayer2.spotify"}
 
-extractSong :: Variant -> Maybe String
+extractSong :: Variant -> Maybe L.Text
 extractSong mData = do
   dict <- fromVariant mData :: Maybe (M.Map String Variant)
   artistsVariant <- M.lookup "xesam:albumArtist" dict
@@ -34,9 +38,11 @@ extractSong mData = do
   artists <- fromVariant artistsVariant :: Maybe [String]
   title <- fromVariant titleVariant :: Maybe String
   artist <- artists !? 0
-  return $ title ++ " - " ++ artist ++ " - "
+  let titleString = title ++ " - " ++ artist ++ " - "
+  let normalizedText = normalize NFC $ T.pack titleString
+  return $ L.fromChunks [normalizedText]
 
-getSong :: Client -> IO (Maybe String)
+getSong :: Client -> IO (Maybe L.Text)
 getSong client = do
   songMData <- getProperty client (spotifyCall "Metadata")
   return $ extractSong =<< eitherToMaybe songMData
@@ -56,7 +62,7 @@ handleStatus status =
     "Paused" -> callCommand "polybar-msg action \"#spot-on-playpause.hook.0\" > /dev/null"
     _ -> return ()
 
-callback :: Client -> IORef (Maybe String) -> Signal -> IO ()
+callback :: Client -> IORef (Maybe L.Text) -> Signal -> IO ()
 callback c ref sig = do
   let body = signalBody sig !? 1
   let outerDict = body >>= fromVariant :: Maybe (M.Map String Variant)
@@ -74,7 +80,7 @@ callback c ref sig = do
   song <- readIORef ref
   when (isNothing song) $ getSong c >>= writeIORef ref
 
-setUpListener :: Client -> IORef (Maybe String) -> IO ()
+setUpListener :: Client -> IORef (Maybe L.Text) -> IO ()
 setUpListener client = void . addMatch client match . callback client
   where
     match = matchAny {
