@@ -1,6 +1,8 @@
 # spot-on
 Spotify plugin for Polybar based on [PrayagS/polybar-spotify](https://github.com/PrayagS/polybar-spotify).
 
+[<img src="scroll.gif" width="300"/>](scroll.gif)
+
 ### Features
   - Comes in a standalone binary
   - Light-weight
@@ -44,6 +46,3 @@ format = <label>
 format-padding = 1
 click-left = ~/.config/polybar/spot-on next
 ```
-
-# Contributing
-I am open to pull requests. Please, write any feature suggestions in issues.
